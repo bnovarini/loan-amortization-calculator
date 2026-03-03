@@ -8,6 +8,7 @@ A TypeScript loan payment calculator that computes amortization schedules, payme
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
 - [Interest Methods](#interest-methods)
+- [Solver Methods](#solver-methods)
 - [SDK Reference](#sdk-reference)
 - [REST API Reference](#rest-api-reference)
 - [Key Design Decisions](#key-design-decisions)
@@ -54,7 +55,7 @@ Input
  │
  ├─ Generate payment dates (respects month-end semantics)
  │
- ├─ Solve for regular payment P (Brent's method)
+ ├─ Solve for regular payment P (Brent's or CFPB iterative method)
  │   └─ computeNFV(P) = 0 when P is correct
  │
  ├─ Build amortization schedule
@@ -131,6 +132,28 @@ For `actuarial`, the interest on that first period is `balance × (APR/12) × 2.
 
 ---
 
+## Solver Methods
+
+The `solverMethod` field controls which root-finding algorithm is used for payment solving and APR back-calculation. Both methods converge to the same result.
+
+### `"brent"` (default)
+
+[Brent's method](https://en.wikipedia.org/wiki/Brent%27s_method) — a bracketed root-finder that combines bisection, secant, and inverse quadratic interpolation. Fast and reliable for all loan structures.
+
+### `"cfpb"`
+
+The iterative interpolation procedure described in **CFPB Regulation Z, Appendix J § (b)(9)**:
+
+1. Start with an estimated rate I₁.
+2. Evaluate the general equation at I₁ to get A′.
+3. Let I₂ = I₁ + 0.1 (percentage points). Evaluate at I₂ to get A″.
+4. Interpolate: `I = I₁ + 0.1 × [(A − A′) / (A″ − A′)]`
+5. Set I₁ = I and repeat until convergence.
+
+This is the reference method specified by the CFPB for APR disclosure. It is also used here for payment solving with an analogous step size.
+
+---
+
 ## SDK Reference
 
 ### `calculateLoan(input: LoanInput): LoanOutput`
@@ -146,6 +169,7 @@ For `actuarial`, the interest on that first period is `balance × (APR/12) × 2.
 | `firstPaymentDate` | string | ✓ | Date of first payment (`YYYY-MM-DD`) |
 | `paymentFrequency` | string | | `"monthly"` (default), `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
 | `interestMethod` | string | | `"actuarial"` (default) or `"actual365"` |
+| `solverMethod` | string | | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods). |
 | `balloonAmount` | number | | Final balloon payment in dollars. Cannot be combined with `equalPayments`. |
 | `equalPayments` | boolean | | Force all payments (including the last) to be equal. |
 | `paymentProtectionRate` | number | | Insurance premium rate in basis points (e.g., `0.5` = 0.05%). Applied to the outstanding balance each period. |
@@ -278,9 +302,11 @@ curl -X POST http://localhost:3000/api/calculate \
 
 ## Key Design Decisions
 
-### Why Brent's method for payment solving?
+### Why Brent's method as default?
 
 Loan payments under `actual365` or with irregular first periods don't have a simple closed-form solution because period lengths vary. Brent's method reliably converges in under 100 iterations for any well-formed loan, regardless of structure. The solver is also reused for APR back-calculation, keeping the codebase consistent.
+
+The CFPB iterative method (`solverMethod: "cfpb"`) is available as an alternative for users who need to match the exact procedure described in Appendix J § (b)(9). Both methods converge to the same result.
 
 ### Why is the final payment treated separately?
 

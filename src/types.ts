@@ -15,6 +15,14 @@ export type PaymentFrequency = 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthl
  */
 export type InterestMethod = 'actuarial' | 'actual365';
 
+/**
+ * Root-finding method used for solving payment and APR.
+ *
+ * - `'brent'` (default): Brent's method — fast, reliable bracketed root-finder.
+ * - `'cfpb'`: CFPB Appendix J iterative interpolation method (§ (b)(9)).
+ */
+export type SolverMethod = 'brent' | 'cfpb';
+
 export interface FeeInput {
   amount: number;
   name: string;
@@ -30,6 +38,7 @@ export interface LoanInput {
   firstPaymentDate: string;
   paymentFrequency?: PaymentFrequency;
   interestMethod?: InterestMethod;
+  solverMethod?: SolverMethod;
   balloonAmount?: number;
   paymentProtectionRate?: number;
   showAmortizationSchedule?: boolean;

@@ -24,6 +24,7 @@ const LoanInputSchema = z
       .enum(['weekly', 'bi-weekly', 'semi-monthly', 'monthly'])
       .optional(),
     interestMethod: z.enum(['actuarial', 'actual365']).optional(),
+    solverMethod: z.enum(['brent', 'cfpb']).optional(),
     balloonAmount: z.number().min(0).optional(),
     paymentProtectionRate: z.number().min(0).optional(),
     showAmortizationSchedule: z.boolean().optional(),

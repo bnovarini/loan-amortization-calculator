@@ -5,4 +5,5 @@ export type {
   LoanOutput,
   PaymentFrequency,
   ScheduleRow,
+  SolverMethod,
 } from '../types';

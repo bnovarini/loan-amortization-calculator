@@ -10,7 +10,7 @@ import {
   isMonthEnd,
   parseDate,
 } from '../src/core/dates';
-import { brentSolve, SolverError } from '../src/core/solver';
+import { brentSolve, cfpbSolve, SolverError } from '../src/core/solver';
 
 // ─── Date Utilities ───────────────────────────────────────────────────────────
 
@@ -139,6 +139,77 @@ describe('brentSolve', () => {
 
   it('throws SolverError when no root in bracket', () => {
     expect(() => brentSolve((x) => x * x + 1, -5, 5)).toThrow(SolverError);
+  });
+});
+
+// ─── CFPB Solver ──────────────────────────────────────────────────────────────
+
+describe('cfpbSolve', () => {
+  it('solves a linear function f(x) = x - 3', () => {
+    const root = cfpbSolve((x) => x - 3, 1, 0.1);
+    expect(root).toBeCloseTo(3, 6);
+  });
+
+  it('solves a cubic f(x) = x^3 - x - 2', () => {
+    const root = cfpbSolve((x) => x ** 3 - x - 2, 1, 0.1);
+    expect(root).toBeCloseTo(1.5213797, 5);
+  });
+
+  it('throws SolverError when denominator is zero', () => {
+    // f is constant → f(I1) == f(I2) → denominator = 0
+    expect(() => cfpbSolve(() => 5, 1, 0.1)).toThrow(SolverError);
+  });
+});
+
+// ─── CFPB solver method produces same results as Brent ────────────────────────
+
+describe('solverMethod: cfpb vs brent produce equivalent results', () => {
+  const base = {
+    amount: 10000,
+    months: 12,
+    apr: 0.06,
+    loanDate: '2024-01-15',
+    firstPaymentDate: '2024-02-15',
+  } as const;
+
+  const brentResult = calculateLoan({ ...base, solverMethod: 'brent' });
+  const cfpbResult = calculateLoan({ ...base, solverMethod: 'cfpb' });
+
+  it('payment amounts match', () => {
+    expect(cfpbResult.paymentPerPeriodCents).toBe(brentResult.paymentPerPeriodCents);
+  });
+
+  it('final payment matches', () => {
+    expect(cfpbResult.finalPaymentCents).toBe(brentResult.finalPaymentCents);
+  });
+
+  it('calculatedAPR matches to 4 decimal places', () => {
+    expect(cfpbResult.calculatedAPR).toBeCloseTo(brentResult.calculatedAPR, 4);
+  });
+
+  it('total of payments matches', () => {
+    expect(cfpbResult.totalOfPaymentsCents).toBe(brentResult.totalOfPaymentsCents);
+  });
+});
+
+describe('solverMethod: cfpb with fees', () => {
+  const result = calculateLoan({
+    amount: 10000,
+    months: 12,
+    apr: 0.06,
+    loanDate: '2024-01-15',
+    firstPaymentDate: '2024-02-15',
+    solverMethod: 'cfpb',
+    fees: [{ amount: 500, name: 'GAP', financed: true, isPrepaidFinanceCharge: true }],
+  });
+
+  it('calculatedAPR is higher than nominal (PPFC raises disclosed APR)', () => {
+    expect(result.calculatedAPR).toBeGreaterThan(0.06);
+  });
+
+  it('faceAmount and amountFinanced are correct', () => {
+    expect(result.faceAmountCents).toBe(1050000);
+    expect(result.amountFinancedCents).toBe(1000000);
   });
 });
 

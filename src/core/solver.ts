@@ -82,3 +82,48 @@ export function brentSolve(
 
   throw new SolverError(`Brent solver did not converge within ${maxIterations} iterations`);
 }
+
+/**
+ * CFPB Appendix J iterative method for root-finding.
+ *
+ * Mirrors the procedure described in Reg Z Appendix J § (b)(9):
+ *   1. Evaluate f at an initial guess I₁.
+ *   2. Evaluate f at I₂ = I₁ + step.
+ *   3. Interpolate: I_new = I₁ − step × f(I₁) / (f(I₂) − f(I₁)).
+ *   4. Set I₁ = I_new and repeat until convergence.
+ */
+export function cfpbSolve(
+  f: (x: number) => number,
+  initialGuess: number,
+  step: number,
+  tolerance = 1e-8,
+  maxIterations = 100,
+): number {
+  let I1 = initialGuess;
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    const fI1 = f(I1);
+
+    if (Math.abs(fI1) < tolerance) {
+      return I1;
+    }
+
+    const I2 = I1 + step;
+    const fI2 = f(I2);
+
+    const denominator = fI2 - fI1;
+    if (Math.abs(denominator) < 1e-15) {
+      throw new SolverError('CFPB solver: interpolation failed (denominator too small)');
+    }
+
+    const Inew = I1 - step * fI1 / denominator;
+
+    if (Math.abs(Inew - I1) < tolerance) {
+      return Inew;
+    }
+
+    I1 = Inew;
+  }
+
+  throw new SolverError(`CFPB solver did not converge within ${maxIterations} iterations`);
+}

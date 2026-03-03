@@ -6,6 +6,7 @@ import type {
   PaymentFrequency,
   ResolvedFees,
   ScheduleRow,
+  SolverMethod,
 } from '../types';
 import {
   countPayments,
@@ -16,7 +17,7 @@ import {
   parseDate,
   periodsPerYear,
 } from './dates';
-import { brentSolve } from './solver';
+import { brentSolve, cfpbSolve } from './solver';
 
 function resolveFees(loanAmount: number, fees?: FeeInput[]): ResolvedFees {
   if (!fees?.length) {
@@ -105,6 +106,7 @@ function solvePayment(
   balloonAmountDollars: number,
   frequency: PaymentFrequency,
   method: InterestMethod,
+  solverMethod: SolverMethod = 'brent',
 ): number {
   const n = paymentDates.length;
 
@@ -112,21 +114,15 @@ function solvePayment(
     return (faceAmountDollars - balloonAmountDollars) / n;
   }
 
-  return brentSolve(
-    (P) =>
-      computeNFV(
-        P,
-        faceAmountDollars,
-        apr,
-        loanDate,
-        paymentDates,
-        balloonAmountDollars,
-        frequency,
-        method,
-      ),
-    0.01,
-    faceAmountDollars * 2,
-  );
+  const f = (P: number) =>
+    computeNFV(P, faceAmountDollars, apr, loanDate, paymentDates, balloonAmountDollars, frequency, method);
+
+  if (solverMethod === 'cfpb') {
+    const initialGuess = faceAmountDollars / n;
+    return cfpbSolve(f, initialGuess, initialGuess * 0.001);
+  }
+
+  return brentSolve(f, 0.01, faceAmountDollars * 2);
 }
 
 interface ScheduleResult {
@@ -212,6 +208,8 @@ function solveAPR(
   finalPaymentCents: number,
   frequency: PaymentFrequency,
   method: InterestMethod,
+  solverMethod: SolverMethod = 'brent',
+  aprHint = 0,
 ): number {
   if (amountFinancedDollars <= 0) return 0;
 
@@ -230,6 +228,11 @@ function solveAPR(
   }
 
   try {
+    if (solverMethod === 'cfpb') {
+      // CFPB § (b)(9): step = 0.1 percentage points = 0.001 in decimal
+      const initialGuess = aprHint > 0 ? aprHint : 0.05;
+      return cfpbSolve(nfv, initialGuess, 0.001);
+    }
     return brentSolve(nfv, 0, 10, 1e-8);
   } catch {
     return 0;
@@ -259,6 +262,7 @@ export function calculateLoan(input: LoanInput): LoanOutput {
     firstPaymentDate: firstPaymentDateStr,
     paymentFrequency = 'monthly',
     interestMethod = 'actuarial',
+    solverMethod = 'brent',
     balloonAmount = 0,
     paymentProtectionRate = 0,
     showAmortizationSchedule = false,
@@ -287,6 +291,7 @@ export function calculateLoan(input: LoanInput): LoanOutput {
     balloonAmount,
     paymentFrequency,
     interestMethod,
+    solverMethod,
   );
   const regularPaymentCents = Math.round(rawPayment * 100);
 
@@ -314,6 +319,8 @@ export function calculateLoan(input: LoanInput): LoanOutput {
     finalPaymentCents,
     paymentFrequency,
     interestMethod,
+    solverMethod,
+    apr,
   );
 
   const output: LoanOutput = {
