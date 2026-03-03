@@ -11,6 +11,10 @@
       "default": "./dist/sdk/index.js"
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bnovarini/loan-amortization-calculator.git"
+  },
   "files": [
     "dist/"
   ],
