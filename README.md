@@ -255,6 +255,57 @@ console.log(result.amountFinancedCents);   // 1030000 = $10,300 (faceAmount - PP
 console.log(result.calculatedAPR);         // > 0.08 because amountFinanced < faceAmount
 ```
 
+### `calculateAPR(input: APRInput): APROutput`
+
+The inverse of `calculateLoan`: given known payment amounts, solves for the APR.
+
+**Input fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `amount` | number | ✓ | Principal loan amount in dollars |
+| `months` | integer | ✓ | Loan term in months |
+| `loanDate` | string | ✓ | Date finance charge begins accruing (`YYYY-MM-DD`) |
+| `firstPaymentDate` | string | ✓ | Date of first payment (`YYYY-MM-DD`) |
+| `paymentPerPeriodCents` | integer | ✓ | Known regular payment amount in cents |
+| `finalPaymentCents` | integer | ✓ | Known final payment amount in cents |
+| `paymentFrequency` | string | | `"monthly"` (default), `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
+| `interestMethod` | string | | `"actuarial"` (default) or `"actual365"` |
+| `solverMethod` | string | | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods). |
+| `showAmortizationSchedule` | boolean | | Include the full payment-by-payment schedule in the output. |
+| `fees` | FeeInput[] | | Array of additional fees (see fee object above). |
+
+**Output fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `paymentPerPeriodCents` | integer | Regular payment amount in cents (echoed from input) |
+| `numberOfPayments` | integer | Count of regular payments (total − 1) |
+| `finalPaymentCents` | integer | Last payment amount in cents (echoed from input) |
+| `financeChargeCents` | integer | Total interest + fees (totalPayments − amountFinanced) |
+| `totalOfPaymentsCents` | integer | Sum of all payments in cents |
+| `calculatedAPR` | number | Solved APR as a decimal |
+| `faceAmountCents` | integer? | Present when fees are provided |
+| `amountFinancedCents` | integer? | Present when fees are provided |
+| `fullAmortizationSchedule` | ScheduleRow[]? | Present when `showAmortizationSchedule: true` |
+
+**Example:**
+
+```typescript
+import { calculateAPR } from 'loan-amortization-calculator';
+
+const result = calculateAPR({
+  amount: 10000,
+  months: 12,
+  loanDate: '2024-01-15',
+  firstPaymentDate: '2024-02-15',
+  paymentPerPeriodCents: 86066,
+  finalPaymentCents: 86080,
+});
+
+console.log(result.calculatedAPR); // ≈ 0.06
+```
+
 ---
 
 ## REST API Reference
@@ -273,7 +324,7 @@ npm test
 
 ### `POST /api/calculate`
 
-Request and response shapes match the SDK input/output above.
+Request and response shapes match the `calculateLoan` SDK input/output above.
 
 **Example:**
 
@@ -286,6 +337,25 @@ curl -X POST http://localhost:3000/api/calculate \
     "apr": 0.0699,
     "loanDate": "2025-01-15",
     "firstPaymentDate": "2025-02-15"
+  }'
+```
+
+### `POST /api/calculate-apr`
+
+Request and response shapes match the `calculateAPR` SDK input/output above.
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:3000/api/calculate-apr \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 5000,
+    "months": 24,
+    "loanDate": "1978-01-10",
+    "firstPaymentDate": "1978-02-10",
+    "paymentPerPeriodCents": 23000,
+    "finalPaymentCents": 23000
   }'
 ```
 

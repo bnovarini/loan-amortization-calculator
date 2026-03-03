@@ -68,6 +68,32 @@ export interface LoanOutput {
   fullAmortizationSchedule?: ScheduleRow[];
 }
 
+export interface APRInput {
+  amount: number;
+  months: number;
+  loanDate: string;
+  firstPaymentDate: string;
+  paymentPerPeriodCents: number;
+  finalPaymentCents: number;
+  paymentFrequency?: PaymentFrequency;
+  interestMethod?: InterestMethod;
+  solverMethod?: SolverMethod;
+  fees?: FeeInput[];
+  showAmortizationSchedule?: boolean;
+}
+
+export interface APROutput {
+  paymentPerPeriodCents: number;
+  numberOfPayments: number;
+  finalPaymentCents: number;
+  financeChargeCents: number;
+  totalOfPaymentsCents: number;
+  calculatedAPR: number;
+  faceAmountCents?: number;
+  amountFinancedCents?: number;
+  fullAmortizationSchedule?: ScheduleRow[];
+}
+
 export interface ResolvedFees {
   financedDollars: number;
   ppfcDollars: number;

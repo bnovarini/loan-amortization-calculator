@@ -1,5 +1,7 @@
-export { calculateLoan } from '../core/calculator';
+export { calculateAPR, calculateLoan } from '../core/calculator';
 export type {
+  APRInput,
+  APROutput,
   FeeInput,
   LoanInput,
   LoanOutput,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateLoan } from '../src/sdk';
+import { calculateAPR, calculateLoan } from '../src/sdk';
 import {
   addMonths,
   countPayments,
@@ -555,5 +555,74 @@ describe('payment frequency totals', () => {
       paymentFrequency: 'weekly',
     });
     expect(r.numberOfPayments).toBe(51);
+  });
+});
+
+// ─── calculateAPR ─────────────────────────────────────────────────────────────
+
+describe('calculateAPR round-trips with calculateLoan', () => {
+  const loanInput = {
+    amount: 10000,
+    months: 12,
+    apr: 0.06,
+    loanDate: '2024-01-15',
+    firstPaymentDate: '2024-02-15',
+  } as const;
+
+  const loan = calculateLoan(loanInput);
+
+  const aprResult = calculateAPR({
+    amount: loanInput.amount,
+    months: loanInput.months,
+    loanDate: loanInput.loanDate,
+    firstPaymentDate: loanInput.firstPaymentDate,
+    paymentPerPeriodCents: loan.paymentPerPeriodCents,
+    finalPaymentCents: loan.finalPaymentCents,
+  });
+
+  it('recovers the original APR', () => {
+    expect(aprResult.calculatedAPR).toBeCloseTo(0.06, 4);
+  });
+
+  it('numberOfPayments matches', () => {
+    expect(aprResult.numberOfPayments).toBe(loan.numberOfPayments);
+  });
+
+  it('totalOfPaymentsCents matches', () => {
+    expect(aprResult.totalOfPaymentsCents).toBe(loan.totalOfPaymentsCents);
+  });
+
+  it('financeChargeCents matches', () => {
+    expect(aprResult.financeChargeCents).toBe(loan.financeChargeCents);
+  });
+});
+
+describe('calculateAPR with fees', () => {
+  const loan = calculateLoan({
+    amount: 10000,
+    months: 12,
+    apr: 0.06,
+    loanDate: '2024-01-15',
+    firstPaymentDate: '2024-02-15',
+    fees: [{ amount: 500, name: 'GAP', financed: true, isPrepaidFinanceCharge: true }],
+  });
+
+  const aprResult = calculateAPR({
+    amount: 10000,
+    months: 12,
+    loanDate: '2024-01-15',
+    firstPaymentDate: '2024-02-15',
+    paymentPerPeriodCents: loan.paymentPerPeriodCents,
+    finalPaymentCents: loan.finalPaymentCents,
+    fees: [{ amount: 500, name: 'GAP', financed: true, isPrepaidFinanceCharge: true }],
+  });
+
+  it('recovers the disclosed APR (higher than nominal due to PPFC)', () => {
+    expect(aprResult.calculatedAPR).toBeCloseTo(loan.calculatedAPR, 6);
+  });
+
+  it('reports faceAmount and amountFinanced', () => {
+    expect(aprResult.faceAmountCents).toBe(1050000);
+    expect(aprResult.amountFinancedCents).toBe(1000000);
   });
 });

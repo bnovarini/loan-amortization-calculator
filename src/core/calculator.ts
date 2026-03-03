@@ -1,4 +1,6 @@
 import type {
+  APRInput,
+  APROutput,
   FeeInput,
   InterestMethod,
   LoanInput,
@@ -251,6 +253,77 @@ function computePaymentProtection(
     total += premium;
   }
   return total;
+}
+
+export function calculateAPR(input: APRInput): APROutput {
+  const {
+    amount,
+    months,
+    loanDate: loanDateStr,
+    firstPaymentDate: firstPaymentDateStr,
+    paymentPerPeriodCents,
+    finalPaymentCents,
+    paymentFrequency = 'monthly',
+    interestMethod = 'actuarial',
+    solverMethod = 'brent',
+    showAmortizationSchedule = false,
+    fees,
+  } = input;
+
+  const loanDate = parseDate(loanDateStr);
+  const firstPaymentDate = parseDate(firstPaymentDateStr);
+
+  const resolvedFees = resolveFees(amount, fees);
+  const { faceAmountDollars, amountFinancedDollars, hasFees } = resolvedFees;
+
+  const n = countPayments(months, paymentFrequency);
+  const paymentDates = generatePaymentDates(firstPaymentDate, n, paymentFrequency);
+
+  const calculatedAPR = solveAPR(
+    amountFinancedDollars,
+    loanDate,
+    paymentDates,
+    paymentPerPeriodCents,
+    finalPaymentCents,
+    paymentFrequency,
+    interestMethod,
+    solverMethod,
+  );
+
+  const totalOfPaymentsCents = paymentPerPeriodCents * (n - 1) + finalPaymentCents;
+  const amountFinancedCents = Math.round(amountFinancedDollars * 100);
+  const financeChargeCents = totalOfPaymentsCents - amountFinancedCents;
+
+  const output: APROutput = {
+    paymentPerPeriodCents,
+    numberOfPayments: n - 1,
+    finalPaymentCents,
+    financeChargeCents,
+    totalOfPaymentsCents,
+    calculatedAPR,
+  };
+
+  if (hasFees) {
+    output.faceAmountCents = Math.round(faceAmountDollars * 100);
+    output.amountFinancedCents = amountFinancedCents;
+  }
+
+  if (showAmortizationSchedule) {
+    const { rows } = buildSchedule(
+      faceAmountDollars,
+      calculatedAPR,
+      loanDate,
+      paymentDates,
+      paymentPerPeriodCents,
+      0,
+      false,
+      paymentFrequency,
+      interestMethod,
+    );
+    output.fullAmortizationSchedule = rows;
+  }
+
+  return output;
 }
 
 export function calculateLoan(input: LoanInput): LoanOutput {
