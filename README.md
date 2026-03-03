@@ -1,42 +1,44 @@
 # Loan Amortization Calculator
 
-A TypeScript loan payment calculator that computes amortization schedules, payment amounts, finance charges, and APR. Exposes both a programmatic SDK and a REST API.
+A TypeScript loan payment calculator that computes amortization schedules, payment amounts, finance charges, and APR. Implements the **CFPB Regulation Z actuarial method** (Appendix J) out of the box.
 
 ## Table of Contents
 
+- [Installation](#installation)
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
 - [Interest Methods](#interest-methods)
-- [API Reference](#api-reference)
 - [SDK Reference](#sdk-reference)
+- [REST API Reference](#rest-api-reference)
 - [Key Design Decisions](#key-design-decisions)
+
+---
+
+## Installation
+
+```bash
+npm install loan-amortization-calculator
+```
+
+No runtime dependencies.
 
 ---
 
 ## Quick Start
 
-```bash
-npm install
+```typescript
+import { calculateLoan } from 'loan-amortization-calculator';
 
-# Start the API server (port 3000)
-npm run dev
+const result = calculateLoan({
+  amount: 10000,
+  months: 60,
+  apr: 0.0699,
+  loanDate: '2025-01-15',
+  firstPaymentDate: '2025-02-15',
+});
 
-# Run tests
-npm test
-```
-
-**Example request:**
-
-```bash
-curl -X POST http://localhost:3000/api/calculate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 10000,
-    "months": 60,
-    "apr": 0.0699,
-    "loanDate": "2025-01-15",
-    "firstPaymentDate": "2025-02-15"
-  }'
+console.log(result.paymentPerPeriodCents); // e.g. 19800 = $198.00
+console.log(result.calculatedAPR);         // ≈ 0.0699
 ```
 
 ---
@@ -129,16 +131,16 @@ For `actuarial`, the interest on that first period is `balance × (APR/12) × 2.
 
 ---
 
-## API Reference
+## SDK Reference
 
-### `POST /api/calculate`
+### `calculateLoan(input: LoanInput): LoanOutput`
 
-**Request body:**
+**Input fields:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `amount` | number | ✓ | Principal loan amount in dollars |
-| `months` | integer | ✓ | Loan term in months (1–600) |
+| `months` | integer | ✓ | Loan term in months |
 | `apr` | number | ✓ | Annual percentage rate as a decimal (e.g., `0.06` = 6%) |
 | `loanDate` | string | ✓ | Date finance charge begins accruing (`YYYY-MM-DD`) |
 | `firstPaymentDate` | string | ✓ | Date of first payment (`YYYY-MM-DD`) |
@@ -147,8 +149,8 @@ For `actuarial`, the interest on that first period is `balance × (APR/12) × 2.
 | `balloonAmount` | number | | Final balloon payment in dollars. Cannot be combined with `equalPayments`. |
 | `equalPayments` | boolean | | Force all payments (including the last) to be equal. |
 | `paymentProtectionRate` | number | | Insurance premium rate in basis points (e.g., `0.5` = 0.05%). Applied to the outstanding balance each period. |
-| `showAmortizationSchedule` | boolean | | Include the full payment-by-payment schedule in the response. |
-| `fees` | Fee[] | | Array of additional fees (see below). |
+| `showAmortizationSchedule` | boolean | | Include the full payment-by-payment schedule in the output. |
+| `fees` | FeeInput[] | | Array of additional fees (see below). |
 
 **Fee object:**
 
@@ -159,7 +161,7 @@ For `actuarial`, the interest on that first period is `balance × (APR/12) × 2.
 | `financed` | boolean | If `true`, added to the face amount (rolled into the loan) |
 | `isPrepaidFinanceCharge` | boolean | If `true`, subtracted from `amountFinanced` for APR purposes |
 
-**Response:**
+**Output fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -185,21 +187,12 @@ For `actuarial`, the interest on that first period is `balance × (APR/12) × 2.
 | `principalCents` | integer | Principal portion |
 | `balanceCents` | integer | Remaining balance after payment |
 
-**Error response (400):**
+### Examples
 
-```json
-{
-  "error": "Validation failed",
-  "details": { ... }
-}
-```
-
----
-
-## SDK Reference
+**Basic loan:**
 
 ```typescript
-import { calculateLoan } from './src/sdk';
+import { calculateLoan } from 'loan-amortization-calculator';
 
 const result = calculateLoan({
   amount: 15000,
@@ -216,7 +209,7 @@ console.log(result.paymentPerPeriodCents); // e.g. 35199 = $351.99
 console.log(result.calculatedAPR);         // ≈ 0.0599
 ```
 
-With fees:
+**With fees:**
 
 ```typescript
 const result = calculateLoan({
@@ -236,6 +229,49 @@ const result = calculateLoan({
 console.log(result.faceAmountCents);       // 1080000 = $10,800 (amount + financed fees)
 console.log(result.amountFinancedCents);   // 1030000 = $10,300 (faceAmount - PPFC)
 console.log(result.calculatedAPR);         // > 0.08 because amountFinanced < faceAmount
+```
+
+---
+
+## REST API Reference
+
+This repo also includes an Express server for HTTP access to the same calculation logic.
+
+### Running locally
+
+```bash
+git clone https://github.com/your-org/loan-amortization-calculator.git
+cd loan-amortization-calculator
+npm install
+npm run dev   # starts on port 3000
+npm test
+```
+
+### `POST /api/calculate`
+
+Request and response shapes match the SDK input/output above.
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:3000/api/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 10000,
+    "months": 60,
+    "apr": 0.0699,
+    "loanDate": "2025-01-15",
+    "firstPaymentDate": "2025-02-15"
+  }'
+```
+
+**Error response (400):**
+
+```json
+{
+  "error": "Validation failed",
+  "details": { ... }
+}
 ```
 
 ---
