@@ -1,6 +1,6 @@
 {
   "name": "loan-amortization-calculator",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Reg Z-compliant loan amortization calculator with actuarial and actual/365 interest methods.",
   "main": "dist/sdk/index.js",
   "types": "dist/sdk/index.d.ts",
@@ -24,10 +24,9 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@types/node": "^20.17.10",
-    "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "@types/node": "^25.3.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
