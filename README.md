@@ -10,7 +10,6 @@ A TypeScript loan payment calculator that computes amortization schedules, payme
 - [Interest Methods](#interest-methods)
 - [Solver Methods](#solver-methods)
 - [SDK Reference](#sdk-reference)
-- [REST API Reference](#rest-api-reference)
 - [Key Design Decisions](#key-design-decisions)
 
 ---
@@ -305,68 +304,6 @@ const result = calculateAPR({
 });
 
 console.log(result.calculatedAPR); // ≈ 0.06
-```
-
----
-
-## REST API Reference
-
-This repo also includes an Express server for HTTP access to the same calculation logic.
-
-### Running locally
-
-```bash
-git clone https://github.com/your-org/loan-amortization-calculator.git
-cd loan-amortization-calculator
-npm install
-npm run dev   # starts on port 3000
-npm test
-```
-
-### `POST /api/calculate`
-
-Request and response shapes match the `calculateLoan` SDK input/output above.
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:3000/api/calculate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 10000,
-    "months": 60,
-    "apr": 0.0699,
-    "loanDate": "2025-01-15",
-    "firstPaymentDate": "2025-02-15"
-  }'
-```
-
-### `POST /api/calculate-apr`
-
-Request and response shapes match the `calculateAPR` SDK input/output above.
-
-**Example:**
-
-```bash
-curl -X POST http://localhost:3000/api/calculate-apr \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 5000,
-    "months": 24,
-    "loanDate": "1978-01-10",
-    "firstPaymentDate": "1978-02-10",
-    "paymentPerPeriodCents": 23000,
-    "finalPaymentCents": 23000
-  }'
-```
-
-**Error response (400):**
-
-```json
-{
-  "error": "Validation failed",
-  "details": { ... }
-}
 ```
 
 ---
