@@ -53,6 +53,7 @@ export interface ScheduleRow {
   interestCents: number;
   principalCents: number;
   balanceCents: number;
+  paymentProtectionCents?: number;
 }
 
 export interface LoanOutput {
@@ -78,6 +79,7 @@ export interface APRInput {
   paymentFrequency?: PaymentFrequency;
   interestMethod?: InterestMethod;
   solverMethod?: SolverMethod;
+  paymentProtectionRate?: number;
   fees?: FeeInput[];
   showAmortizationSchedule?: boolean;
 }
@@ -91,6 +93,7 @@ export interface APROutput {
   calculatedAPR: number;
   faceAmountCents?: number;
   amountFinancedCents?: number;
+  totalPaymentProtectionCents?: number;
   fullAmortizationSchedule?: ScheduleRow[];
 }
 
