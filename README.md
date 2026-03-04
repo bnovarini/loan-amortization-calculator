@@ -183,8 +183,8 @@ This is the reference method specified by the CFPB for APR disclosure. It is als
 |-------|------|-------------|
 | `amount` | number | Fee amount in dollars |
 | `name` | string | Fee label |
-| `financed` | boolean | If `true`, added to the face amount (rolled into the loan) |
-| `isPrepaidFinanceCharge` | boolean | If `true`, subtracted from `amountFinanced` for APR purposes |
+| `financed` | boolean | If `true` (default), added to the face amount (rolled into the loan). Set to `false` to exclude. |
+| `isPrepaidFinanceCharge` | boolean | If `true`, subtracted from `amountFinanced` for APR purposes. Defaults to `false`. |
 
 **Output fields:**
 
@@ -335,7 +335,9 @@ The regulation distinguishes two types of finance charges:
 | Financed non-PPFC | true | false | Added to `faceAmount` and `amountFinanced`. Increases payment; APR unchanged. |
 | Financed PPFC | true | true | Added to `faceAmount`, subtracted from `amountFinanced`. Increases both payment and disclosed APR. |
 | Upfront PPFC | false | true | Not financed, but subtracted from `amountFinanced`. Increases disclosed APR. |
-| Upfront non-PPFC | false | false | No effect on any calculation (e.g., a documentation fee paid at closing). |
+| Upfront non-PPFC | false | false | Not financed, not a finance charge. No effect on any calculation (e.g., a documentation fee paid at closing). |
+
+> **Defaults:** `financed` defaults to `true` (fees are rolled into the loan unless explicitly opted out). `isPrepaidFinanceCharge` defaults to `false`.
 
 The disclosed APR is always back-calculated starting from `amountFinanced`, so any fee that reduces `amountFinanced` relative to `faceAmount` raises the effective cost of credit.
 
