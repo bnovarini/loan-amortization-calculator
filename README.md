@@ -210,6 +210,7 @@ This is the reference method specified by the CFPB for APR disclosure. It is als
 | `interestCents` | integer | Interest portion |
 | `principalCents` | integer | Principal portion |
 | `balanceCents` | integer | Remaining balance after payment |
+| `paymentProtectionCents` | integer? | Payment protection premium for this period. Present when `paymentProtectionRate > 0`. |
 
 ### Examples
 
@@ -272,6 +273,7 @@ The inverse of `calculateLoan`: given known payment amounts, solves for the APR.
 | `paymentFrequency` | string | | `"monthly"` (default), `"quarterly"`, `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
 | `interestMethod` | string | | `"actuarial"` (default) or `"actual365"` |
 | `solverMethod` | string | | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods). |
+| `paymentProtectionRate` | number | | Insurance premium rate in basis points (e.g., `0.5` = 0.05%). Applied to the outstanding balance each period. |
 | `showAmortizationSchedule` | boolean | | Include the full payment-by-payment schedule in the output. |
 | `fees` | FeeInput[] | | Array of additional fees (see fee object above). |
 
@@ -287,6 +289,7 @@ The inverse of `calculateLoan`: given known payment amounts, solves for the APR.
 | `calculatedAPR` | number | Solved APR as a decimal |
 | `faceAmountCents` | integer? | Present when fees are provided |
 | `amountFinancedCents` | integer? | Present when fees are provided |
+| `totalPaymentProtectionCents` | integer? | Present when `paymentProtectionRate > 0` |
 | `fullAmortizationSchedule` | ScheduleRow[]? | Present when `showAmortizationSchedule: true` |
 
 **Example:**

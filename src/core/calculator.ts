@@ -255,6 +255,7 @@ function computePaymentProtection(
   for (let k = 0; k < rows.length; k++) {
     const balanceBeforePayment = k === 0 ? faceAmountCents : rows[k - 1].balanceCents;
     const premium = Math.round(balanceBeforePayment * paymentProtectionRate * 0.001);
+    rows[k].paymentProtectionCents = premium;
     total += premium;
   }
   return total;
@@ -271,6 +272,7 @@ export function calculateAPR(input: APRInput): APROutput {
     paymentFrequency = 'monthly',
     interestMethod = 'actuarial',
     solverMethod = 'brent',
+    paymentProtectionRate = 0,
     showAmortizationSchedule = false,
     fees,
   } = input;
@@ -313,7 +315,7 @@ export function calculateAPR(input: APRInput): APROutput {
     output.amountFinancedCents = amountFinancedCents;
   }
 
-  if (showAmortizationSchedule) {
+  if (showAmortizationSchedule || paymentProtectionRate > 0) {
     const { rows } = buildSchedule(
       faceAmountDollars,
       calculatedAPR,
@@ -325,7 +327,19 @@ export function calculateAPR(input: APRInput): APROutput {
       paymentFrequency,
       interestMethod,
     );
-    output.fullAmortizationSchedule = rows;
+
+    if (paymentProtectionRate > 0) {
+      const faceAmountCents = Math.round(faceAmountDollars * 100);
+      output.totalPaymentProtectionCents = computePaymentProtection(
+        faceAmountCents,
+        rows,
+        paymentProtectionRate,
+      );
+    }
+
+    if (showAmortizationSchedule) {
+      output.fullAmortizationSchedule = rows;
+    }
   }
 
   return output;
