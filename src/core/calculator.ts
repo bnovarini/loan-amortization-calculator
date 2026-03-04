@@ -359,6 +359,7 @@ export function calculateLoan(input: LoanInput): LoanOutput {
     paymentProtectionRate = 0,
     showAmortizationSchedule = false,
     equalPayments = false,
+    roundUp = true,
     fees,
   } = input;
 
@@ -385,7 +386,7 @@ export function calculateLoan(input: LoanInput): LoanOutput {
     interestMethod,
     solverMethod,
   );
-  const regularPaymentCents = Math.round(rawPayment * 100);
+  const regularPaymentCents = roundUp ? Math.ceil(rawPayment * 100) : Math.round(rawPayment * 100);
 
   const { rows, finalPaymentCents } = buildSchedule(
     faceAmountDollars,

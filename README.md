@@ -172,6 +172,7 @@ This is the reference method specified by the CFPB for APR disclosure. It is als
 | `solverMethod` | string | | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods). |
 | `balloonAmount` | number | | Final balloon payment in dollars. Cannot be combined with `equalPayments`. |
 | `equalPayments` | boolean | | Force all payments (including the last) to be equal. |
+| `roundUp` | boolean | | When `true` (default), the regular payment is rounded up (`Math.ceil`). When `false`, standard rounding (`Math.round`) is used. |
 | `paymentProtectionRate` | number | | Insurance premium rate in basis points (e.g., `0.5` = 0.05%). Applied to the outstanding balance each period. |
 | `showAmortizationSchedule` | boolean | | Include the full payment-by-payment schedule in the output. |
 | `fees` | FeeInput[] | | Array of additional fees (see below). |

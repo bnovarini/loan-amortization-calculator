@@ -43,6 +43,7 @@ export interface LoanInput {
   paymentProtectionRate?: number;
   showAmortizationSchedule?: boolean;
   equalPayments?: boolean;
+  roundUp?: boolean;
   fees?: FeeInput[];
 }
 
@@ -80,6 +81,7 @@ export interface APRInput {
   interestMethod?: InterestMethod;
   solverMethod?: SolverMethod;
   paymentProtectionRate?: number;
+  roundUp?: boolean;
   fees?: FeeInput[];
   showAmortizationSchedule?: boolean;
 }
