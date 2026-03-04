@@ -21,7 +21,7 @@ const LoanInputSchema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'firstPaymentDate must be YYYY-MM-DD'),
     paymentFrequency: z
-      .enum(['weekly', 'bi-weekly', 'semi-monthly', 'monthly'])
+      .enum(['weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly'])
       .optional(),
     interestMethod: z.enum(['actuarial', 'actual365']).optional(),
     solverMethod: z.enum(['brent', 'cfpb']).optional(),
@@ -50,7 +50,7 @@ const APRInputSchema = z.object({
   paymentPerPeriodCents: z.number().int().positive('paymentPerPeriodCents must be positive'),
   finalPaymentCents: z.number().int().positive('finalPaymentCents must be positive'),
   paymentFrequency: z
-    .enum(['weekly', 'bi-weekly', 'semi-monthly', 'monthly'])
+    .enum(['weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly'])
     .optional(),
   interestMethod: z.enum(['actuarial', 'actual365']).optional(),
   solverMethod: z.enum(['brent', 'cfpb']).optional(),

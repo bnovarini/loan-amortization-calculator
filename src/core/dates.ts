@@ -80,7 +80,7 @@ export function generatePaymentDates(
     return dates;
   }
 
-  // Monthly — preserve month-end semantics
+  // Month-based (monthly or quarterly) — preserve month-end semantics
   const isFeb = firstPaymentDate.getUTCMonth() === 1; // February is month index 1
   const daysInFeb = isLeapYear(firstPaymentDate.getUTCFullYear()) ? 29 : 28;
   let preferredDay: number;
@@ -93,8 +93,9 @@ export function generatePaymentDates(
     preferredDay = firstPaymentDate.getUTCDate();
   }
 
+  const monthStep = frequency === 'quarterly' ? 3 : 1;
   return Array.from({ length: totalPayments }, (_, k) =>
-    k === 0 ? firstPaymentDate : addMonths(firstPaymentDate, k, preferredDay),
+    k === 0 ? firstPaymentDate : addMonths(firstPaymentDate, k * monthStep, preferredDay),
   );
 }
 
@@ -102,6 +103,8 @@ export function countPayments(months: number, frequency: PaymentFrequency): numb
   switch (frequency) {
     case 'monthly':
       return months;
+    case 'quarterly':
+      return Math.round(months / 3);
     case 'semi-monthly':
       return months * 2;
     case 'bi-weekly':
@@ -116,6 +119,8 @@ export function periodsPerYear(frequency: PaymentFrequency): number {
   switch (frequency) {
     case 'monthly':
       return 12;
+    case 'quarterly':
+      return 4;
     case 'semi-monthly':
       return 24;
     case 'bi-weekly':
@@ -125,40 +130,86 @@ export function periodsPerYear(frequency: PaymentFrequency): number {
   }
 }
 
-// Count full calendar months from start to end, respecting month-end capping.
-// e.g. Jan 31 → Feb 28 (non-leap) = 1 full month (addMonths caps to Feb 28).
-function fullMonthsBetween(start: Date, end: Date): number {
-  const sy = start.getUTCFullYear(),
-    sm = start.getUTCMonth();
-  const ey = end.getUTCFullYear(),
-    em = end.getUTCMonth();
-  let months = (ey - sy) * 12 + (em - sm);
-  // If addMonths(start, months) overshoots end, subtract one month.
-  if (addMonths(start, months).getTime() > end.getTime()) months--;
-  return Math.max(0, months);
+
+// Determine the preferredDay for backward month stepping from a payment date.
+// For month-end dates, use 31 so addMonths always lands on the last day of each month.
+// For non-month-end, use the payment date's day-of-month.
+function backwardPreferredDay(date: Date): number {
+  return isMonthEnd(date) ? 31 : date.getUTCDate();
 }
 
-// Reg Z Appendix J §(b)(5)(iv): express the first period in unit-periods.
+// Count full unit-periods (each `stepMonths` months long) backwards from
+// firstPaymentDate, then express the remaining gap as a fraction of a unit-period
+// using Reg Z conventions (full months × 30 + odd days, divided by stepMonths × 30).
 //
-// For monthly: count full calendar months from loanDate to firstPaymentDate,
-// then add remaining odd days / 30 (Reg Z treats 1 month = 30 days for fractions).
+// Per Appendix J, boundaries are anchored on the payment date's day-of-month
+// (not the loan date's), which matters when they differ.
+//
+// Returns { t, f } where t = full unit-periods, f = fractional remainder.
+function monthBasedComponents(
+  loanDate: Date,
+  firstPaymentDate: Date,
+  stepMonths: number,
+): { t: number; f: number } {
+  const pDay = backwardPreferredDay(firstPaymentDate);
+
+  // Count full unit-periods (each stepMonths months) backwards from firstPaymentDate
+  let t = 0;
+  while (addMonths(firstPaymentDate, -stepMonths * (t + 1), pDay).getTime() >= loanDate.getTime()) {
+    t++;
+  }
+  const boundary = t === 0 ? firstPaymentDate : addMonths(firstPaymentDate, -stepMonths * t, pDay);
+
+  // Count remaining full months backwards from boundary
+  const bDay = backwardPreferredDay(boundary);
+  let remainingMonths = 0;
+  while (addMonths(boundary, -(remainingMonths + 1), bDay).getTime() >= loanDate.getTime()) {
+    remainingMonths++;
+  }
+  const innerBoundary =
+    remainingMonths === 0 ? boundary : addMonths(boundary, -remainingMonths, bDay);
+  const oddDays = daysBetween(loanDate, innerBoundary);
+
+  const daysPerUnitPeriod = stepMonths * 30;
+  return { t, f: (remainingMonths * 30 + oddDays) / daysPerUnitPeriod };
+}
+
+// Reg Z Appendix J §(b)(5)(iv): split the first period into { t, f } where
+// t = full unit-periods and f = fractional remainder.
+//
+// For month-based frequencies: count backwards from firstPaymentDate.
 // For day-based frequencies: total actual days / days-per-unit-period.
-//
-// A result of 1.0 means a standard-length first period; < 1.0 is a short first
-// period; > 1.0 is a long first period.
+export function firstPeriodComponents(
+  loanDate: Date,
+  firstPaymentDate: Date,
+  frequency: PaymentFrequency,
+): { t: number; f: number } {
+  const totalDays = daysBetween(loanDate, firstPaymentDate);
+
+  if (frequency === 'weekly') {
+    const t = Math.floor(totalDays / 7);
+    return { t, f: (totalDays - t * 7) / 7 };
+  }
+  if (frequency === 'bi-weekly') {
+    const t = Math.floor(totalDays / 14);
+    return { t, f: (totalDays - t * 14) / 14 };
+  }
+  if (frequency === 'semi-monthly') {
+    const t = Math.floor(totalDays / 15);
+    return { t, f: (totalDays - t * 15) / 15 };
+  }
+  if (frequency === 'quarterly') return monthBasedComponents(loanDate, firstPaymentDate, 3);
+
+  // Monthly
+  return monthBasedComponents(loanDate, firstPaymentDate, 1);
+}
+
+// Convenience wrapper: returns t + f as a single number.
 export function firstPeriodFactor(
   loanDate: Date,
   firstPaymentDate: Date,
   frequency: PaymentFrequency,
 ): number {
-  const totalDays = daysBetween(loanDate, firstPaymentDate);
-  if (frequency === 'weekly') return totalDays / 7;
-  if (frequency === 'bi-weekly') return totalDays / 14;
-  if (frequency === 'semi-monthly') return totalDays / 15;
-
-  // Monthly: full calendar months + odd days / 30
-  const fullMonths = fullMonthsBetween(loanDate, firstPaymentDate);
-  const anchor = addMonths(loanDate, fullMonths);
-  const oddDays = daysBetween(anchor, firstPaymentDate);
-  return fullMonths + oddDays / 30;
+  const { t, f } = firstPeriodComponents(loanDate, firstPaymentDate, frequency);
+  return t + f;
 }

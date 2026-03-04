@@ -1,4 +1,4 @@
-export type PaymentFrequency = 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly';
+export type PaymentFrequency = 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly' | 'quarterly';
 
 /**
  * Interest calculation method.

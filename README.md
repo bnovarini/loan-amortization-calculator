@@ -97,6 +97,7 @@ Interest per period = balance × (APR / periodsPerYear)
 
 | Frequency    | Periods per year | Rate per period |
 |-------------|-----------------|-----------------|
+| Quarterly    | 4               | APR / 4         |
 | Monthly      | 12              | APR / 12        |
 | Semi-monthly | 24              | APR / 24        |
 | Bi-weekly    | 26              | APR / 26        |
@@ -105,7 +106,7 @@ Interest per period = balance × (APR / periodsPerYear)
 Key compliance properties:
 
 - **All periods are equal** — a February with 28 days accrues the same interest as a March with 31 days. This directly satisfies Reg Z's requirement that *"all months shall be considered equal."*
-- **First period scaling** — when the gap from loan date to first payment date is not exactly one unit-period, the first period's interest is scaled proportionally. Full calendar months are counted first; any remaining days are expressed as `days / 30` (Reg Z's fractional period convention per Appendix J §(b)(5)(iv)).
+- **First period compound scaling** — when the gap from loan date to first payment date is not exactly one unit-period, the first period is split into `t` full unit-periods and a fractional remainder `f`. Interest is computed using the Appendix J compound formula: `balance × [(1+i)^t × (1+f×i) − 1]`, where `i = APR / periodsPerYear`. Full calendar months are counted backwards from the payment date; any remaining days are expressed as `days / 30` (Appendix J §(b)(5)(iv)).
 
 ### `"actual365"`
 
@@ -128,7 +129,7 @@ When a loan originates mid-month or the first payment falls more than one unit-p
 | `actuarial` | 2 full months (Feb 2 → Apr 2) + 1 odd day / 30 | **2.0333** |
 | `actual365` | 60 actual days | **60** days |
 
-For `actuarial`, the interest on that first period is `balance × (APR/12) × 2.0333` — reflecting the extended gap before the first payment.
+For `actuarial`, the first period has `t = 2` full unit-periods and `f = 1/30 ≈ 0.0333`. Interest is `balance × [(1 + APR/12)² × (1 + 0.0333 × APR/12) − 1]` — the compound formula per Appendix J.
 
 ---
 
@@ -167,7 +168,7 @@ This is the reference method specified by the CFPB for APR disclosure. It is als
 | `apr` | number | ✓ | Annual percentage rate as a decimal (e.g., `0.06` = 6%) |
 | `loanDate` | string | ✓ | Date finance charge begins accruing (`YYYY-MM-DD`) |
 | `firstPaymentDate` | string | ✓ | Date of first payment (`YYYY-MM-DD`) |
-| `paymentFrequency` | string | | `"monthly"` (default), `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
+| `paymentFrequency` | string | | `"monthly"` (default), `"quarterly"`, `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
 | `interestMethod` | string | | `"actuarial"` (default) or `"actual365"` |
 | `solverMethod` | string | | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods). |
 | `balloonAmount` | number | | Final balloon payment in dollars. Cannot be combined with `equalPayments`. |
@@ -269,7 +270,7 @@ The inverse of `calculateLoan`: given known payment amounts, solves for the APR.
 | `firstPaymentDate` | string | ✓ | Date of first payment (`YYYY-MM-DD`) |
 | `paymentPerPeriodCents` | integer | ✓ | Known regular payment amount in cents |
 | `finalPaymentCents` | integer | ✓ | Known final payment amount in cents |
-| `paymentFrequency` | string | | `"monthly"` (default), `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
+| `paymentFrequency` | string | | `"monthly"` (default), `"quarterly"`, `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
 | `interestMethod` | string | | `"actuarial"` (default) or `"actual365"` |
 | `solverMethod` | string | | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods). |
 | `showAmortizationSchedule` | boolean | | Include the full payment-by-payment schedule in the output. |

@@ -13,7 +13,7 @@ import type {
 import {
   countPayments,
   daysBetween,
-  firstPeriodFactor,
+  firstPeriodComponents,
   formatDate,
   generatePaymentDates,
   parseDate,
@@ -54,7 +54,11 @@ function resolveFees(loanAmount: number, fees?: FeeInput[]): ResolvedFees {
 
 // Returns a function that computes un-rounded interest for the k-th payment period.
 //
-// 'actuarial': interest = amount × (APR / periodsPerYear) × firstPeriodFactor (k=0 only).
+// 'actuarial': Appendix J compound formula for the first period:
+//   interest = amount × [(1+i)^t × (1+f×i) − 1]
+//   where i = APR / periodsPerYear, t = full unit-periods, f = fractional remainder.
+//   For standard periods (t=1, f=0) this simplifies to amount × i.
+//
 // 'actual365': interest = amount × (APR / 365) × actual days since the previous date.
 //
 // The returned function works on any unit (dollars or cents) — apply Math.round()
@@ -67,9 +71,10 @@ function buildPeriodInterest(
   paymentDates: Date[],
 ): (amount: number, k: number) => number {
   if (method === 'actuarial') {
-    const periodicRate = apr / periodsPerYear(frequency);
-    const factor0 = firstPeriodFactor(loanDate, paymentDates[0], frequency);
-    return (amount, k) => amount * periodicRate * (k === 0 ? factor0 : 1);
+    const i = apr / periodsPerYear(frequency);
+    const { t, f } = firstPeriodComponents(loanDate, paymentDates[0], frequency);
+    const firstPeriodMultiplier = Math.pow(1 + i, t) * (1 + f * i) - 1;
+    return (amount, k) => amount * (k === 0 ? firstPeriodMultiplier : i);
   }
   // actual365: prevDate = loanDate for k=0, paymentDates[k-1] for k>0
   const dailyRate = apr / 365;
