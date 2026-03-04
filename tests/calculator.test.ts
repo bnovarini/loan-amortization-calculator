@@ -626,3 +626,128 @@ describe('calculateAPR with fees', () => {
     expect(aprResult.amountFinancedCents).toBe(1000000);
   });
 });
+
+// ─── CFPB Appendix J Examples (public API integration tests) ─────────────────
+
+describe('CFPB Appendix J: irregular final payment via calculateAPR', () => {
+  // A = $5000, P = $230, Pn = $280, n = 24
+  // Advance: 1-10-78, First payment: 2-10-78 (regular first period)
+  // Expected APR = 10.50%
+  it('solves APR = 10.50%', () => {
+    const result = calculateAPR({
+      amount: 5000,
+      months: 24,
+      loanDate: '1978-01-10',
+      firstPaymentDate: '1978-02-10',
+      paymentPerPeriodCents: 23000,
+      finalPaymentCents: 28000,
+    });
+    expect(result.calculatedAPR).toBeCloseTo(0.1050, 4);
+  });
+});
+
+describe('CFPB Appendix J: bi-weekly, short first period, irregular final payment via calculateAPR', () => {
+  // A = $200, P = $9.50, Pn = $30, n = 20, w = 26
+  // Advance: 4-3-78, First payment: 4-11-78 (t = 0, f = 8/14)
+  // Expected APR = 12.22%
+  it('solves APR = 12.22%', () => {
+    const result = calculateAPR({
+      amount: 200,
+      months: 9,
+      loanDate: '1978-04-03',
+      firstPaymentDate: '1978-04-11',
+      paymentPerPeriodCents: 950,
+      finalPaymentCents: 3000,
+      paymentFrequency: 'bi-weekly',
+    });
+    expect(result.calculatedAPR).toBeCloseTo(0.1222, 4);
+  });
+});
+
+describe('CFPB Appendix J: regular monthly payments via calculateAPR', () => {
+  // A = $5000, P = $230, n = 24, w = 12
+  // Advance: 1-10-78, First payment: 2-10-78 (t = 1, f = 0)
+  // Expected APR = 9.69%
+  it('solves APR = 9.69%', () => {
+    const result = calculateAPR({
+      amount: 5000,
+      months: 24,
+      loanDate: '1978-01-10',
+      firstPaymentDate: '1978-02-10',
+      paymentPerPeriodCents: 23000,
+      finalPaymentCents: 23000,
+    });
+    expect(result.calculatedAPR).toBeCloseTo(0.0969, 4);
+  });
+});
+
+describe('CFPB Appendix J: monthly, long first period via calculateAPR', () => {
+  // A = $6000, P = $200, n = 36, w = 12
+  // Advance: 2-10-78, First payment: 4-1-78 (t = 1, f = 19/30)
+  // Expected APR = 11.82%
+  it('solves APR = 11.82%', () => {
+    const result = calculateAPR({
+      amount: 6000,
+      months: 36,
+      loanDate: '1978-02-10',
+      firstPaymentDate: '1978-04-01',
+      paymentPerPeriodCents: 20000,
+      finalPaymentCents: 20000,
+    });
+    expect(result.calculatedAPR).toBeCloseTo(0.1182, 4);
+  });
+});
+
+describe('CFPB Appendix J: semi-monthly, short first period via calculateAPR', () => {
+  // A = $5000, P = $219.17, n = 24, w = 24
+  // Advance: 2-23-78, First payment: 3-1-78 (t = 0, f = 6/15)
+  // Expected APR = 10.34%
+  it('solves APR = 10.34%', () => {
+    const result = calculateAPR({
+      amount: 5000,
+      months: 12,
+      loanDate: '1978-02-23',
+      firstPaymentDate: '1978-03-01',
+      paymentPerPeriodCents: 21917,
+      finalPaymentCents: 21917,
+      paymentFrequency: 'semi-monthly',
+    });
+    expect(result.calculatedAPR).toBeCloseTo(0.1034, 4);
+  });
+});
+
+describe('CFPB Appendix J: quarterly, long first period via calculateAPR', () => {
+  // A = $10,000, P = $385, n = 40, w = 4
+  // Advance: 5-23-78, First payment: 10-1-78 (t = 1, f = 39/90)
+  // Expected APR = 8.97%
+  it('solves APR = 8.97%', () => {
+    const result = calculateAPR({
+      amount: 10000,
+      months: 120,
+      loanDate: '1978-05-23',
+      firstPaymentDate: '1978-10-01',
+      paymentPerPeriodCents: 38500,
+      finalPaymentCents: 38500,
+      paymentFrequency: 'quarterly',
+    });
+    expect(result.calculatedAPR).toBeCloseTo(0.0897, 4);
+  });
+});
+
+describe('CFPB Appendix J: weekly, long first period via calculateAPR', () => {
+  // A = $500, P = $17.60, n = 30, w = 52
+  // Advance: 3-20-78, First payment: 4-21-78 (t = 4, f = 4/7)
+  // Expected APR = 14.96%
+  it('solves APR = 14.96%', () => {
+    const result = calculateAPR({
+      amount: 500,
+      months: 7,
+      loanDate: '1978-03-20',
+      firstPaymentDate: '1978-04-21',
+      paymentPerPeriodCents: 1760,
+      finalPaymentCents: 1760,
+      paymentFrequency: 'weekly',
+    });
+    expect(result.calculatedAPR).toBeCloseTo(0.1496, 4);
+  });
+});
