@@ -33,7 +33,7 @@ function resolveFees(loanAmount: number, fees?: FeeInput[]): ResolvedFees {
   }
 
   const financedDollars = fees
-    .filter((f) => f.financed === true)
+    .filter((f) => f.financed !== false)
     .reduce((sum, f) => sum + f.amount, 0);
 
   const ppfcDollars = fees
