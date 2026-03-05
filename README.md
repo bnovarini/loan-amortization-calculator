@@ -2,6 +2,10 @@
 
 A TypeScript loan payment calculator that computes amortization schedules, payment amounts, finance charges, and APR. Implements the **CFPB Regulation Z actuarial method** (Appendix J) out of the box.
 
+
+> [!WARNING]
+> While this calculator implements logic stated in CFPB Regulation Z and passes the examples provided in Appendix J, this doesn't guarantee full Reg Z compliance. Please conduct your own tests to ensure more comprehensive coverage for your use cases
+
 ## Table of Contents
 
 - [Installation](#installation)
