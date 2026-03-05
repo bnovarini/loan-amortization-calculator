@@ -21,7 +21,7 @@ import {
 } from './dates';
 import { brentSolve, cfpbSolve } from './solver';
 
-function resolveFees(loanAmount: number, fees?: FeeInput[]): ResolvedFees {
+const resolveFees = (loanAmount: number, fees?: FeeInput[]): ResolvedFees => {
   if (!fees?.length) {
     return {
       financedDollars: 0,
@@ -50,7 +50,7 @@ function resolveFees(loanAmount: number, fees?: FeeInput[]): ResolvedFees {
     amountFinancedDollars,
     hasFees: true,
   };
-}
+};
 
 // Returns a function that computes un-rounded interest for the k-th payment period.
 //
@@ -63,27 +63,27 @@ function resolveFees(loanAmount: number, fees?: FeeInput[]): ResolvedFees {
 //
 // The returned function works on any unit (dollars or cents) — apply Math.round()
 // at the call site when integer cents are needed.
-function buildPeriodInterest(
+const buildPeriodInterest = (
   method: InterestMethod,
   apr: number,
   frequency: PaymentFrequency,
   loanDate: Date,
   paymentDates: Date[],
-): (amount: number, k: number) => number {
+): ((amount: number, k: number) => number) => {
   if (method === 'actuarial') {
     const i = apr / periodsPerYear(frequency);
     const { t, f } = firstPeriodComponents(loanDate, paymentDates[0], frequency);
-    const firstPeriodMultiplier = Math.pow(1 + i, t) * (1 + f * i) - 1;
+    const firstPeriodMultiplier = (1 + i) ** t * (1 + f * i) - 1;
     return (amount, k) => amount * (k === 0 ? firstPeriodMultiplier : i);
   }
   // actual365: prevDate = loanDate for k=0, paymentDates[k-1] for k>0
   const dailyRate = apr / 365;
   return (amount, k) =>
     amount * dailyRate * daysBetween(k === 0 ? loanDate : paymentDates[k - 1], paymentDates[k]);
-}
+};
 
 // Returns the remaining balance after all payments — target is 0 when P is correct.
-function computeNFV(
+const computeNFV = (
   P: number,
   faceAmountDollars: number,
   apr: number,
@@ -92,7 +92,7 @@ function computeNFV(
   balloonAmountDollars: number,
   frequency: PaymentFrequency,
   method: InterestMethod,
-): number {
+): number => {
   const n = paymentDates.length;
   const interest = buildPeriodInterest(method, apr, frequency, loanDate, paymentDates);
   let balance = faceAmountDollars;
@@ -103,9 +103,9 @@ function computeNFV(
   balance = balance + interest(balance, n - 1) - (P + balloonAmountDollars);
 
   return balance;
-}
+};
 
-function solvePayment(
+const solvePayment = (
   faceAmountDollars: number,
   apr: number,
   loanDate: Date,
@@ -114,7 +114,7 @@ function solvePayment(
   frequency: PaymentFrequency,
   method: InterestMethod,
   solverMethod: SolverMethod = 'brent',
-): number {
+): number => {
   const n = paymentDates.length;
 
   if (apr === 0) {
@@ -130,14 +130,14 @@ function solvePayment(
   }
 
   return brentSolve(f, 0.01, faceAmountDollars * 2);
-}
+};
 
 interface ScheduleResult {
   rows: ScheduleRow[];
   finalPaymentCents: number;
 }
 
-function buildSchedule(
+const buildSchedule = (
   faceAmountDollars: number,
   apr: number,
   loanDate: Date,
@@ -147,7 +147,7 @@ function buildSchedule(
   equalPayments: boolean,
   frequency: PaymentFrequency,
   method: InterestMethod,
-): ScheduleResult {
+): ScheduleResult => {
   const n = paymentDates.length;
   const interest = buildPeriodInterest(method, apr, frequency, loanDate, paymentDates);
   let balanceCents = Math.round(faceAmountDollars * 100);
@@ -196,7 +196,7 @@ function buildSchedule(
   }
 
   return { rows, finalPaymentCents: rows[n - 1].paymentAmountCents };
-}
+};
 
 // Mirror of computeNFV, solving for APR instead of payment.
 // Uses the same Reg Z actuarial method (periodic rates), starting from
@@ -207,7 +207,7 @@ function buildSchedule(
 //
 // Bracket [0, 10]: at r=0, nfv = amountFinanced - totalPayments < 0;
 // at r=10 (1000%), massive interest → nfv >> 0.
-function solveAPR(
+const solveAPR = (
   amountFinancedDollars: number,
   loanDate: Date,
   paymentDates: Date[],
@@ -217,14 +217,14 @@ function solveAPR(
   method: InterestMethod,
   solverMethod: SolverMethod = 'brent',
   aprHint = 0,
-): number {
+): number => {
   if (amountFinancedDollars <= 0) return 0;
 
   const n = paymentDates.length;
   const regularPayment = regularPaymentCents / 100;
   const finalPayment = finalPaymentCents / 100;
 
-  function nfv(r: number): number {
+  const nfv = (r: number): number => {
     const interest = buildPeriodInterest(method, r, frequency, loanDate, paymentDates);
     let balance = amountFinancedDollars;
     for (let k = 0; k < n - 1; k++) {
@@ -232,7 +232,7 @@ function solveAPR(
     }
     balance = balance + interest(balance, n - 1) - finalPayment;
     return balance;
-  }
+  };
 
   try {
     if (solverMethod === 'cfpb') {
@@ -244,13 +244,13 @@ function solveAPR(
   } catch {
     return 0;
   }
-}
+};
 
-function computePaymentProtection(
+const computePaymentProtection = (
   faceAmountCents: number,
   rows: ScheduleRow[],
   paymentProtectionRate: number,
-): number {
+): number => {
   let total = 0;
   for (let k = 0; k < rows.length; k++) {
     const balanceBeforePayment = k === 0 ? faceAmountCents : rows[k - 1].balanceCents;
@@ -259,9 +259,9 @@ function computePaymentProtection(
     total += premium;
   }
   return total;
-}
+};
 
-export function calculateAPR(input: APRInput): APROutput {
+export const calculateAPR = (input: APRInput): APROutput => {
   const {
     amount,
     months,
@@ -343,9 +343,9 @@ export function calculateAPR(input: APRInput): APROutput {
   }
 
   return output;
-}
+};
 
-export function calculateLoan(input: LoanInput): LoanOutput {
+export const calculateLoan = (input: LoanInput): LoanOutput => {
   const {
     amount,
     months,
@@ -444,4 +444,4 @@ export function calculateLoan(input: LoanInput): LoanOutput {
   }
 
   return output;
-}
+};

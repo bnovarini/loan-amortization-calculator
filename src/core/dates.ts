@@ -2,37 +2,34 @@ import type { PaymentFrequency } from '../types';
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-export function isLeapYear(year: number): boolean {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
+export const isLeapYear = (year: number): boolean =>
+  (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 
-export function daysInUTCMonth(year: number, month: number): number {
+export const daysInUTCMonth = (year: number, month: number): number => {
   if (month === 1) return isLeapYear(year) ? 29 : 28; // February (0-based month 1)
   return DAYS_IN_MONTH[month];
-}
+};
 
-export function parseDate(s: string): Date {
+export const parseDate = (s: string): Date => {
   const [year, month, day] = s.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day));
-}
+};
 
-export function formatDate(d: Date): string {
+export const formatDate = (d: Date): string => {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
-}
+};
 
-export function daysBetween(start: Date, end: Date): number {
-  return Math.abs((end.getTime() - start.getTime()) / 86400000);
-}
+export const daysBetween = (start: Date, end: Date): number =>
+  Math.abs((end.getTime() - start.getTime()) / 86400000);
 
-export function isMonthEnd(date: Date): boolean {
-  return date.getUTCDate() === daysInUTCMonth(date.getUTCFullYear(), date.getUTCMonth());
-}
+export const isMonthEnd = (date: Date): boolean =>
+  date.getUTCDate() === daysInUTCMonth(date.getUTCFullYear(), date.getUTCMonth());
 
 // Uses 0-based month arithmetic internally.
-export function addMonths(date: Date, months: number, preferredDay?: number): Date {
+export const addMonths = (date: Date, months: number, preferredDay?: number): Date => {
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth(); // 0-based
   const pDay = preferredDay ?? date.getUTCDate();
@@ -43,13 +40,13 @@ export function addMonths(date: Date, months: number, preferredDay?: number): Da
 
   const newDay = Math.min(pDay, daysInUTCMonth(newYear, newMonth));
   return new Date(Date.UTC(newYear, newMonth, newDay));
-}
+};
 
-export function generatePaymentDates(
+export const generatePaymentDates = (
   firstPaymentDate: Date,
   totalPayments: number,
   frequency: PaymentFrequency,
-): Date[] {
+): Date[] => {
   if (totalPayments === 0) return [];
   if (totalPayments === 1) return [firstPaymentDate];
 
@@ -97,9 +94,9 @@ export function generatePaymentDates(
   return Array.from({ length: totalPayments }, (_, k) =>
     k === 0 ? firstPaymentDate : addMonths(firstPaymentDate, k * monthStep, preferredDay),
   );
-}
+};
 
-export function countPayments(months: number, frequency: PaymentFrequency): number {
+export const countPayments = (months: number, frequency: PaymentFrequency): number => {
   switch (frequency) {
     case 'monthly':
       return months;
@@ -112,10 +109,10 @@ export function countPayments(months: number, frequency: PaymentFrequency): numb
     case 'weekly':
       return Math.round((months * 52) / 12);
   }
-}
+};
 
 // Reg Z Appendix J: number of unit-periods per year for each payment frequency.
-export function periodsPerYear(frequency: PaymentFrequency): number {
+export const periodsPerYear = (frequency: PaymentFrequency): number => {
   switch (frequency) {
     case 'monthly':
       return 12;
@@ -128,15 +125,14 @@ export function periodsPerYear(frequency: PaymentFrequency): number {
     case 'weekly':
       return 52;
   }
-}
+};
 
 
 // Determine the preferredDay for backward month stepping from a payment date.
 // For month-end dates, use 31 so addMonths always lands on the last day of each month.
 // For non-month-end, use the payment date's day-of-month.
-function backwardPreferredDay(date: Date): number {
-  return isMonthEnd(date) ? 31 : date.getUTCDate();
-}
+const backwardPreferredDay = (date: Date): number =>
+  isMonthEnd(date) ? 31 : date.getUTCDate();
 
 // Count full unit-periods (each `stepMonths` months long) backwards from
 // firstPaymentDate, then express the remaining gap as a fraction of a unit-period
@@ -146,11 +142,11 @@ function backwardPreferredDay(date: Date): number {
 // (not the loan date's), which matters when they differ.
 //
 // Returns { t, f } where t = full unit-periods, f = fractional remainder.
-function monthBasedComponents(
+const monthBasedComponents = (
   loanDate: Date,
   firstPaymentDate: Date,
   stepMonths: number,
-): { t: number; f: number } {
+): { t: number; f: number } => {
   const pDay = backwardPreferredDay(firstPaymentDate);
 
   // Count full unit-periods (each stepMonths months) backwards from firstPaymentDate
@@ -172,18 +168,18 @@ function monthBasedComponents(
 
   const daysPerUnitPeriod = stepMonths * 30;
   return { t, f: (remainingMonths * 30 + oddDays) / daysPerUnitPeriod };
-}
+};
 
 // Reg Z Appendix J §(b)(5)(iv): split the first period into { t, f } where
 // t = full unit-periods and f = fractional remainder.
 //
 // For month-based frequencies: count backwards from firstPaymentDate.
 // For day-based frequencies: total actual days / days-per-unit-period.
-export function firstPeriodComponents(
+export const firstPeriodComponents = (
   loanDate: Date,
   firstPaymentDate: Date,
   frequency: PaymentFrequency,
-): { t: number; f: number } {
+): { t: number; f: number } => {
   const totalDays = daysBetween(loanDate, firstPaymentDate);
 
   if (frequency === 'weekly') {
@@ -202,14 +198,14 @@ export function firstPeriodComponents(
 
   // Monthly
   return monthBasedComponents(loanDate, firstPaymentDate, 1);
-}
+};
 
 // Convenience wrapper: returns t + f as a single number.
-export function firstPeriodFactor(
+export const firstPeriodFactor = (
   loanDate: Date,
   firstPaymentDate: Date,
   frequency: PaymentFrequency,
-): number {
+): number => {
   const { t, f } = firstPeriodComponents(loanDate, firstPaymentDate, frequency);
   return t + f;
-}
+};

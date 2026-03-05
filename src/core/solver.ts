@@ -5,13 +5,13 @@ export class SolverError extends Error {
   }
 }
 
-export function brentSolve(
+export const brentSolve = (
   f: (x: number) => number,
   a: number,
   b: number,
   tolerance = 1e-8,
   maxIterations = 100,
-): number {
+): number => {
   let fa = f(a);
   let fb = f(b);
 
@@ -81,7 +81,7 @@ export function brentSolve(
   }
 
   throw new SolverError(`Brent solver did not converge within ${maxIterations} iterations`);
-}
+};
 
 /**
  * CFPB Appendix J iterative method for root-finding.
@@ -92,13 +92,13 @@ export function brentSolve(
  *   3. Interpolate: I_new = I₁ − step × f(I₁) / (f(I₂) − f(I₁)).
  *   4. Set I₁ = I_new and repeat until convergence.
  */
-export function cfpbSolve(
+export const cfpbSolve = (
   f: (x: number) => number,
   initialGuess: number,
   step: number,
   tolerance = 1e-8,
   maxIterations = 100,
-): number {
+): number => {
   let I1 = initialGuess;
 
   for (let iter = 0; iter < maxIterations; iter++) {
@@ -126,4 +126,4 @@ export function cfpbSolve(
   }
 
   throw new SolverError(`CFPB solver did not converge within ${maxIterations} iterations`);
-}
+};
