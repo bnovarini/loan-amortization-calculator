@@ -94,15 +94,17 @@ Implements the **actuarial method** as defined in **CFPB Regulation Z, Appendix 
 Interest per period = balance × (APR / periodsPerYear)
 ```
 
-| Frequency    | Periods per year | Rate per period |
-|-------------|-----------------|-----------------|
-| Quarterly    | 4               | APR / 4         |
-| Monthly      | 12              | APR / 12        |
-| Semi-monthly | 24              | APR / 24        |
-| Bi-weekly    | 26              | APR / 26        |
-| Weekly       | 52              | APR / 52        |
 
-Key compliance properties:
+| Frequency    | Periods per year | Rate per period |
+| ------------ | ---------------- | --------------- |
+| Quarterly    | 4                | APR / 4         |
+| Monthly      | 12               | APR / 12        |
+| Semi-monthly | 24               | APR / 24        |
+| Bi-weekly    | 26               | APR / 26        |
+| Weekly       | 52               | APR / 52        |
+
+
+Key properties:
 
 - **All periods are equal** — a February with 28 days accrues the same interest as a March with 31 days. This directly satisfies Reg Z's requirement that *"all months shall be considered equal."*
 - **First period compound scaling** — when the gap from loan date to first payment date is not exactly one unit-period, the first period is split into `t` full unit-periods and a fractional remainder `f`. Interest is computed using the Appendix J compound formula: `balance × [(1+i)^t × (1+f×i) − 1]`, where `i = APR / periodsPerYear`. Full calendar months are counted backwards from the payment date; any remaining days are expressed as `days / 30` (Appendix J §(b)(5)(iv)).
@@ -123,10 +125,12 @@ When a loan originates mid-month or the first payment falls more than one unit-p
 
 **Example** — loan date `2026-02-02`, first payment `2026-04-03`:
 
-| Method | First period calculation | Factor |
-|--------|--------------------------|--------|
-| `actuarial` | 2 full months (Feb 2 → Apr 2) + 1 odd day / 30 | **2.0333** |
-| `actual365` | 60 actual days | **60** days |
+
+| Method      | First period calculation                       | Factor      |
+| ----------- | ---------------------------------------------- | ----------- |
+| `actuarial` | 2 full months (Feb 2 → Apr 2) + 1 odd day / 30 | **2.0333**  |
+| `actual365` | 60 actual days                                 | **60** days |
+
 
 For `actuarial`, the first period has `t = 2` full unit-periods and `f = 1/30 ≈ 0.0333`. Interest is `balance × [(1 + APR/12)² × (1 + 0.0333 × APR/12) − 1]` — the compound formula per Appendix J.
 
@@ -160,58 +164,66 @@ This is the reference method specified by the CFPB for APR disclosure. It is als
 
 **Input fields:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `amount` | number | ✓ | Principal loan amount in dollars |
-| `months` | integer | ✓ | Loan term in months |
-| `apr` | number | ✓ | Annual percentage rate as a decimal (e.g., `0.06` = 6%) |
-| `loanDate` | string | ✓ | Date finance charge begins accruing (`YYYY-MM-DD`) |
-| `firstPaymentDate` | string | ✓ | Date of first payment (`YYYY-MM-DD`) |
-| `paymentFrequency` | string | | `"monthly"` (default), `"quarterly"`, `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
-| `interestMethod` | string | | `"actuarial"` (default) or `"actual365"` |
-| `solverMethod` | string | | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods). |
-| `balloonAmount` | number | | Final balloon payment in dollars. Cannot be combined with `equalPayments`. |
-| `equalPayments` | boolean | | Force all payments (including the last) to be equal. |
-| `roundUp` | boolean | | When `true` (default), the regular payment is rounded up (`Math.ceil`). When `false`, standard rounding (`Math.round`) is used. |
-| `paymentProtectionRate` | number | | Insurance premium rate in basis points (e.g., `0.5` = 0.05%). Applied to the outstanding balance each period. |
-| `showAmortizationSchedule` | boolean | | Include the full payment-by-payment schedule in the output. |
-| `fees` | FeeInput[] | | Array of additional fees (see below). |
+
+| Field                      | Type       | Required | Description                                                                                                                     |
+| -------------------------- | ---------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `amount`                   | number     | ✓        | Principal loan amount in dollars                                                                                                |
+| `months`                   | integer    | ✓        | Loan term in months                                                                                                             |
+| `apr`                      | number     | ✓        | Annual percentage rate as a decimal (e.g., `0.06` = 6%)                                                                         |
+| `loanDate`                 | string     | ✓        | Date finance charge begins accruing (`YYYY-MM-DD`)                                                                              |
+| `firstPaymentDate`         | string     | ✓        | Date of first payment (`YYYY-MM-DD`)                                                                                            |
+| `paymentFrequency`         | string     |          | `"monthly"` (default), `"quarterly"`, `"semi-monthly"`, `"bi-weekly"`, `"weekly"`                                               |
+| `interestMethod`           | string     |          | `"actuarial"` (default) or `"actual365"`                                                                                        |
+| `solverMethod`             | string     |          | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods).                                                         |
+| `balloonAmount`            | number     |          | Final balloon payment in dollars. Cannot be combined with `equalPayments`.                                                      |
+| `equalPayments`            | boolean    |          | Force all payments (including the last) to be equal.                                                                            |
+| `roundUp`                  | boolean    |          | When `true` (default), the regular payment is rounded up (`Math.ceil`). When `false`, standard rounding (`Math.round`) is used. |
+| `paymentProtectionRate`    | number     |          | Insurance premium rate in basis points (e.g., `0.5` = 0.05%). Applied to the outstanding balance each period.                   |
+| `showAmortizationSchedule` | boolean    |          | Include the full payment-by-payment schedule in the output.                                                                     |
+| `fees`                     | FeeInput[] |          | Array of additional fees (see below).                                                                                           |
+
 
 **Fee object:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `amount` | number | Fee amount in dollars |
-| `name` | string | Fee label |
-| `financed` | boolean | If `true` (default), added to the face amount (rolled into the loan). Set to `false` to exclude. |
-| `isPrepaidFinanceCharge` | boolean | If `true`, subtracted from `amountFinanced` for APR purposes. Defaults to `false`. |
+
+| Field                    | Type    | Description                                                                                      |
+| ------------------------ | ------- | ------------------------------------------------------------------------------------------------ |
+| `amount`                 | number  | Fee amount in dollars                                                                            |
+| `name`                   | string  | Fee label                                                                                        |
+| `financed`               | boolean | If `true` (default), added to the face amount (rolled into the loan). Set to `false` to exclude. |
+| `isPrepaidFinanceCharge` | boolean | If `true`, subtracted from `amountFinanced` for APR purposes. Defaults to `false`.               |
+
 
 **Output fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `paymentPerPeriodCents` | integer | Regular payment amount in cents |
-| `numberOfPayments` | integer | Count of regular payments (total − 1) |
-| `finalPaymentCents` | integer | Last payment amount in cents |
-| `financeChargeCents` | integer | Total interest + fees (totalPayments − amountFinanced) |
-| `totalOfPaymentsCents` | integer | Sum of all payments in cents |
-| `calculatedAPR` | number | Back-calculated APR as a decimal |
-| `faceAmountCents` | integer? | Present when fees are provided |
-| `amountFinancedCents` | integer? | Present when fees are provided |
-| `totalPaymentProtectionCents` | integer? | Present when `paymentProtectionRate > 0` |
-| `fullAmortizationSchedule` | ScheduleRow[]? | Present when `showAmortizationSchedule: true` |
+
+| Field                         | Type           | Description                                            |
+| ----------------------------- | -------------- | ------------------------------------------------------ |
+| `paymentPerPeriodCents`       | integer        | Regular payment amount in cents                        |
+| `numberOfPayments`            | integer        | Count of regular payments (total − 1)                  |
+| `finalPaymentCents`           | integer        | Last payment amount in cents                           |
+| `financeChargeCents`          | integer        | Total interest + fees (totalPayments − amountFinanced) |
+| `totalOfPaymentsCents`        | integer        | Sum of all payments in cents                           |
+| `calculatedAPR`               | number         | Back-calculated APR as a decimal                       |
+| `faceAmountCents`             | integer?       | Present when fees are provided                         |
+| `amountFinancedCents`         | integer?       | Present when fees are provided                         |
+| `totalPaymentProtectionCents` | integer?       | Present when `paymentProtectionRate > 0`               |
+| `fullAmortizationSchedule`    | ScheduleRow[]? | Present when `showAmortizationSchedule: true`          |
+
 
 **Schedule row:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `paymentNumber` | integer | 1-based payment index |
-| `date` | string | Payment date (`YYYY-MM-DD`) |
-| `paymentAmountCents` | integer | Total payment |
-| `interestCents` | integer | Interest portion |
-| `principalCents` | integer | Principal portion |
-| `balanceCents` | integer | Remaining balance after payment |
+
+| Field                    | Type     | Description                                                                           |
+| ------------------------ | -------- | ------------------------------------------------------------------------------------- |
+| `paymentNumber`          | integer  | 1-based payment index                                                                 |
+| `date`                   | string   | Payment date (`YYYY-MM-DD`)                                                           |
+| `paymentAmountCents`     | integer  | Total payment                                                                         |
+| `interestCents`          | integer  | Interest portion                                                                      |
+| `principalCents`         | integer  | Principal portion                                                                     |
+| `balanceCents`           | integer  | Remaining balance after payment                                                       |
 | `paymentProtectionCents` | integer? | Payment protection premium for this period. Present when `paymentProtectionRate > 0`. |
+
 
 ### Examples
 
@@ -263,35 +275,39 @@ The inverse of `calculateLoan`: given known payment amounts, solves for the APR.
 
 **Input fields:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `amount` | number | ✓ | Principal loan amount in dollars |
-| `months` | integer | ✓ | Loan term in months |
-| `loanDate` | string | ✓ | Date finance charge begins accruing (`YYYY-MM-DD`) |
-| `firstPaymentDate` | string | ✓ | Date of first payment (`YYYY-MM-DD`) |
-| `paymentPerPeriodCents` | integer | ✓ | Known regular payment amount in cents |
-| `finalPaymentCents` | integer | ✓ | Known final payment amount in cents |
-| `paymentFrequency` | string | | `"monthly"` (default), `"quarterly"`, `"semi-monthly"`, `"bi-weekly"`, `"weekly"` |
-| `interestMethod` | string | | `"actuarial"` (default) or `"actual365"` |
-| `solverMethod` | string | | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods). |
-| `paymentProtectionRate` | number | | Insurance premium rate in basis points (e.g., `0.5` = 0.05%). Applied to the outstanding balance each period. |
-| `showAmortizationSchedule` | boolean | | Include the full payment-by-payment schedule in the output. |
-| `fees` | FeeInput[] | | Array of additional fees (see fee object above). |
+
+| Field                      | Type       | Required | Description                                                                                                   |
+| -------------------------- | ---------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `amount`                   | number     | ✓        | Principal loan amount in dollars                                                                              |
+| `months`                   | integer    | ✓        | Loan term in months                                                                                           |
+| `loanDate`                 | string     | ✓        | Date finance charge begins accruing (`YYYY-MM-DD`)                                                            |
+| `firstPaymentDate`         | string     | ✓        | Date of first payment (`YYYY-MM-DD`)                                                                          |
+| `paymentPerPeriodCents`    | integer    | ✓        | Known regular payment amount in cents                                                                         |
+| `finalPaymentCents`        | integer    | ✓        | Known final payment amount in cents                                                                           |
+| `paymentFrequency`         | string     |          | `"monthly"` (default), `"quarterly"`, `"semi-monthly"`, `"bi-weekly"`, `"weekly"`                             |
+| `interestMethod`           | string     |          | `"actuarial"` (default) or `"actual365"`                                                                      |
+| `solverMethod`             | string     |          | `"brent"` (default) or `"cfpb"`. See [Solver Methods](#solver-methods).                                       |
+| `paymentProtectionRate`    | number     |          | Insurance premium rate in basis points (e.g., `0.5` = 0.05%). Applied to the outstanding balance each period. |
+| `showAmortizationSchedule` | boolean    |          | Include the full payment-by-payment schedule in the output.                                                   |
+| `fees`                     | FeeInput[] |          | Array of additional fees (see fee object above).                                                              |
+
 
 **Output fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `paymentPerPeriodCents` | integer | Regular payment amount in cents (echoed from input) |
-| `numberOfPayments` | integer | Count of regular payments (total − 1) |
-| `finalPaymentCents` | integer | Last payment amount in cents (echoed from input) |
-| `financeChargeCents` | integer | Total interest + fees (totalPayments − amountFinanced) |
-| `totalOfPaymentsCents` | integer | Sum of all payments in cents |
-| `calculatedAPR` | number | Solved APR as a decimal |
-| `faceAmountCents` | integer? | Present when fees are provided |
-| `amountFinancedCents` | integer? | Present when fees are provided |
-| `totalPaymentProtectionCents` | integer? | Present when `paymentProtectionRate > 0` |
-| `fullAmortizationSchedule` | ScheduleRow[]? | Present when `showAmortizationSchedule: true` |
+
+| Field                         | Type           | Description                                            |
+| ----------------------------- | -------------- | ------------------------------------------------------ |
+| `paymentPerPeriodCents`       | integer        | Regular payment amount in cents (echoed from input)    |
+| `numberOfPayments`            | integer        | Count of regular payments (total − 1)                  |
+| `finalPaymentCents`           | integer        | Last payment amount in cents (echoed from input)       |
+| `financeChargeCents`          | integer        | Total interest + fees (totalPayments − amountFinanced) |
+| `totalOfPaymentsCents`        | integer        | Sum of all payments in cents                           |
+| `calculatedAPR`               | number         | Solved APR as a decimal                                |
+| `faceAmountCents`             | integer?       | Present when fees are provided                         |
+| `amountFinancedCents`         | integer?       | Present when fees are provided                         |
+| `totalPaymentProtectionCents` | integer?       | Present when `paymentProtectionRate > 0`               |
+| `fullAmortizationSchedule`    | ScheduleRow[]? | Present when `showAmortizationSchedule: true`          |
+
 
 **Example:**
 
@@ -330,12 +346,14 @@ The same pattern applies to `equalPayments` mode: all payments are forced equal 
 
 The regulation distinguishes two types of finance charges:
 
-| Fee type | `financed` | `isPrepaidFinanceCharge` | Effect |
-|----------|-----------|--------------------------|--------|
-| Financed non-PPFC | true | false | Added to `faceAmount` and `amountFinanced`. Increases payment; APR unchanged. |
-| Financed PPFC | true | true | Added to `faceAmount`, subtracted from `amountFinanced`. Increases both payment and disclosed APR. |
-| Upfront PPFC | false | true | Not financed, but subtracted from `amountFinanced`. Increases disclosed APR. |
-| Upfront non-PPFC | false | false | Not financed, not a finance charge. No effect on any calculation (e.g., a documentation fee paid at closing). |
+
+| Fee type          | `financed` | `isPrepaidFinanceCharge` | Effect                                                                                                        |
+| ----------------- | ---------- | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Financed non-PPFC | true       | false                    | Added to `faceAmount` and `amountFinanced`. Increases payment; APR unchanged.                                 |
+| Financed PPFC     | true       | true                     | Added to `faceAmount`, subtracted from `amountFinanced`. Increases both payment and disclosed APR.            |
+| Upfront PPFC      | false      | true                     | Not financed, but subtracted from `amountFinanced`. Increases disclosed APR.                                  |
+| Upfront non-PPFC  | false      | false                    | Not financed, not a finance charge. No effect on any calculation (e.g., a documentation fee paid at closing). |
+
 
 > **Defaults:** `financed` defaults to `true` (fees are rolled into the loan unless explicitly opted out). `isPrepaidFinanceCharge` defaults to `false`.
 
