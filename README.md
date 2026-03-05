@@ -86,7 +86,7 @@ All amounts are stored and computed internally in **cents** (integer arithmetic)
 
 The `interestMethod` field controls how interest accrues each period.
 
-### `"actuarial"` (default) — Reg Z compliant
+### `"actuarial"` (default) — per Reg Z implementation
 
 Implements the **actuarial method** as defined in **CFPB Regulation Z, Appendix J (12 CFR Part 1026)**.
 
@@ -227,7 +227,7 @@ const result = calculateLoan({
   loanDate: '2025-03-01',
   firstPaymentDate: '2025-04-01',
   paymentFrequency: 'monthly',
-  interestMethod: 'actuarial',    // Reg Z compliant default
+  interestMethod: 'actuarial',    // default, according to Reg Z implementation
   showAmortizationSchedule: true,
 });
 
