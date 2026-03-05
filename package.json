@@ -1,6 +1,6 @@
 {
   "name": "loan-amortization-calculator",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "Loan amortization calculator with actuarial (as per Reg Z implementation) and actual/365 interest methods.",
   "main": "dist/sdk/index.js",
   "types": "dist/sdk/index.d.ts",
