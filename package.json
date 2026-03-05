@@ -7,7 +7,7 @@
   "exports": {
     ".": {
       "types": "./dist/sdk/index.d.ts",
-      "require": "./dist/sdk/index.js",
+      "import": "./dist/sdk/index.js",
       "default": "./dist/sdk/index.js"
     }
   },
@@ -15,6 +15,7 @@
     "type": "git",
     "url": "https://github.com/bnovarini/loan-amortization-calculator.git"
   },
+  "type": "module",
   "license": "MIT",
   "files": [
     "dist/"
