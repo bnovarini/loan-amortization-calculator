@@ -3,4 +3,3 @@ dist/
 *.js.map
 .env
 proofs/.lake/
-proofs/lake-manifest.json
